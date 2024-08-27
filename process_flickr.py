@@ -11,8 +11,9 @@ from loguru import logger
 
 def main(args):
     device = torch.device('cuda:0')
-    clip_model, preprocess = clip.load(args.clip_model_path, device=device, jit=False)
-    with open(args.caption_path, 'r') as f:
+    # clip_model, preprocess = clip.load(args.clip_model_path, device=device, jit=False)
+    clip_model, preprocess = clip.load("RN50",device=device,jit=False)
+    with open(args.caption_path, 'r',encoding="utf-8") as f:
         lines = f.readlines()
 
     logger.info('len of captions：{}'.format(len(lines)))
