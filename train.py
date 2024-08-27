@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 import argparse
 from dataset import ClipCapDataset
-from models.model import ClipCaptionModel
+from models.model_origin import ClipCaptionModel
 import time
 from loguru import logger
 from torch.utils.tensorboard import SummaryWriter
@@ -24,7 +24,7 @@ def set_args():
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--prefix_len', type=int, default=10)
     parser.add_argument('--constant_len', type=int, default=10)
-    parser.add_argument('--clip_size', type=int, default=512)
+    parser.add_argument('--clip_size', type=int, default=1024)
     parser.add_argument('--bs_train', type=int, default=2)
     parser.add_argument('--dev_size', type=int, default=10)
     parser.add_argument('--bs_eval', type=int, default=128)
