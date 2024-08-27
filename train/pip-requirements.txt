@@ -3,3 +3,4 @@ scikit-image==0.18.1
 loguru
 tensorboard
 jieba
+pillow~=10.2.0
