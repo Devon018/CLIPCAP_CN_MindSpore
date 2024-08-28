@@ -1,11 +1,15 @@
 from enum import Enum
 from typing import Tuple, Optional, Union
-from loguru import logger
+# from loguru import logger
 
+import numpy as np
 from mindspore import nn, ops
 from mindnlp.transformers import GPT2LMHeadModel, GPT2Config
 from mindnlp.core.nn import functional as F
 from mindnlp.transformers import BertTokenizer
+from mindspore import Tensor
+from mindformers import AutoConfig, AutoModel
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
 
 
@@ -16,7 +20,7 @@ class MappingType(Enum):
 
 
 class MLP(nn.Cell):
-    def forward(self, x):
+    def construct(self, x):
         return self.model(x)
 
     def __init__(self, sizes: Tuple[int, ...], bias=True, act=nn.Tanh):
@@ -29,6 +33,10 @@ class MLP(nn.Cell):
         self.model = nn.SequentialCell(*layers)
 
 class GPT2ForSummarization(GPT2LMHeadModel):
+
+    def __init__(self, config, tokenizer):
+        super(GPT2ForSummarization, self).__init__(config)
+        self.tokenizer = tokenizer
     def forward(
         self,
         input_ids = None,
@@ -39,7 +47,7 @@ class GPT2ForSummarization(GPT2LMHeadModel):
         shift_logits = outputs.logits[..., :-1, :]
         shift_labels = labels[..., 1:]
         # Flatten the tokens
-        loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=tokenizer.pad_token_id)
+        loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=self.tokenizer.pad_token_id)
         return (loss,)
 
 # class BertMapper(nn.Module):
@@ -68,7 +76,7 @@ class GPT2ForSummarization(GPT2LMHeadModel):
 
 class ClipCaptionModel(nn.Cell):
 
-    def __init__(self, gpt2_path, bert_config, prefix_len=10, clip_size=512, mapping_type: MappingType = MappingType.MLP,
+    def __init__(self, gpt2_path, bert_config,tokenizer, prefix_len=10, clip_size=1024, mapping_type: MappingType = MappingType.MLP,
                  finetune_gpt2=False, constant_len=10):
         super(ClipCaptionModel, self).__init__()
 
@@ -77,10 +85,13 @@ class ClipCaptionModel(nn.Cell):
         # gpt2_config = GPT2Config(vocab_size=len(tokenizer), bos_token_id)
         gpt2_config = GPT2Config(vocab_size=len(tokenizer), bos_token_id=tokenizer.cls_token_id, eos_token_id=tokenizer.pad_token_id)
 
+        # gpt_config = AutoConfig.from_pretrained("gpt2")
         try:
             # self.gpt2 = GPT2LMHeadModel.from_pretrained(gpt2_path)
-            self.gpt2 = GPT2ForSummarization(gpt2_config)
-            logger.info('succeed to load pretrain gpt2 model')
+            # self.gpt2 = AutoModel.from_pretrained("gpt2")  # 自动加载预置权重到网络中
+            self.gpt2 = GPT2ForSummarization(gpt2_config, tokenizer)
+            print("succeed to load pretrain gpt2 model")
+            # logger.info('succeed to load pretrain gpt2 model')
         except:
             pass
             # config = GPT2Config.from_pretrained(gpt2_path)
@@ -93,11 +104,14 @@ class ClipCaptionModel(nn.Cell):
         self.prefix_len = prefix_len
         if mapping_type == MappingType.MLP:
             self.clip_project = MLP((clip_size, (self.prefix_size * prefix_len) // 2, self.prefix_size * prefix_len))
+            print("We are using MLP")
+        else:
+            print("We are using BERT")
         # else:
         #     self.clip_project = BertMapper(bert_config, clip_size, self.prefix_size, prefix_len, constant_len)
         self.finetune_gpt2 = finetune_gpt2
 
-    def forward(self, clip_embeds, caption_ids, mask):
+    def construct(self, clip_embeds, caption_ids, mask):
         """
 
         :param clip_embeds: 图像embedding, [bs, clip_size]
@@ -107,11 +121,17 @@ class ClipCaptionModel(nn.Cell):
         """
         # caption_inputs_embeds:[bs, caption_len, prefix_size]
         caption_embeds = self.gpt2.transformer.wte(caption_ids)
+        print(caption_embeds.shape)
+
         # prefix_embeds:[bs, prefix_len, prefix_size]
         prefix_embeds = self.clip_project(clip_embeds).view(-1, self.prefix_len, self.prefix_size)
+        print(prefix_embeds.shape)
         # embedding_cat:[bs, prefix_len+caption_len, prefix_size]
-        embedding_cat = ops.concat((prefix_embeds, caption_embeds), dim=1)
-        out = self.gpt2(inputs_embeds=embedding_cat, attention_mask=mask)
+        embedding_cat = ops.concat((prefix_embeds, caption_embeds), axis=1)
+        print(embedding_cat.shape)
+        # out = self.gpt2(input_ids=embedding_cat, attention_mask=mask)
+        out = self.gpt2.generate(input_ids=embedding_cat)
+        print(out.shape)
         # logits:[bs, prefix_len+caption_len, prefix_size]
         logits = out.logits
         return logits
@@ -128,3 +148,4 @@ class ClipCaptionModel(nn.Cell):
 
 if __name__ == '__main__':
     model = ClipCaptionModel("","")
+    print(model(Tensor([1.0] * 1024),Tensor([1.0] * 10).unsqueeze(0), Tensor(np.ones([1,20]).astype(np.float32))))
