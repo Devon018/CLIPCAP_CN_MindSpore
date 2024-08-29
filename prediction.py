@@ -74,11 +74,11 @@ def generate(model, clip_embeds, tokenizer, args):
         next_token_logits = logits[:, -1, :]    # 取最后一个单词的预测分布
         next_token_logits = next_token_logits / temperature
         next_token_logits[:, unk_id] = -float('Inf')   # 将unk设为无穷小
-
+        print(f"next_token_logits:{next_token_logits}")
         # topk filter
         filtered_logits = topk_filtering(next_token_logits, topk, topp)
-        next_token_ids = mindspore.ops.multinomial(mindspore.ops.softmax(filtered_logits, dim=-1), num_samples=1).squeeze(1).tolist()
-
+        next_token_ids = mindspore.ops.multinomial(mindspore.ops.softmax(filtered_logits, axis=-1), num_samples=1).squeeze(1).tolist()
+        print(f"next_token_ids:{next_token_ids}")
         # 分别判断生成图片是否已生成完毕
         for index in range(len(next_token_ids)):
             token_id = next_token_ids[index]
@@ -94,9 +94,9 @@ def generate(model, clip_embeds, tokenizer, args):
             else:
                 caption_ids[index].append(token_id)
         next_token_ids = mindspore.tensor(next_token_ids)
-        wte = model.langauge_model.get_input_embeddings()
+        wte = model.language_model.get_input_embeddings()
         next_token_embeds = wte(next_token_ids).unsqueeze(1)
-        inputs_embeds = mindspore.ops.cat((inputs_embeds, next_token_embeds), dim=1)
+        inputs_embeds = mindspore.ops.cat((inputs_embeds, next_token_embeds), axis=1)
 
         cur_len += 1
         if cur_len > max_len or False not in finish_flag:
@@ -105,7 +105,9 @@ def generate(model, clip_embeds, tokenizer, args):
     # 对token_id进行解码
     captions = []
     for caption_id in caption_ids:
+        print(f"caption_id:{caption_id}")
         caption = tokenizer.convert_ids_to_tokens(caption_id)
+        print(f"caption:{caption}")
         caption = ''.join(caption)
         captions.append(caption)
 
