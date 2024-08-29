@@ -82,12 +82,15 @@ class ClipCapDataset:
 class ImageDataset:
 
     def __init__(self, image_path):
-        if os.path.isdir(image_path):
-            with open(image_path,"rb") as f:
-                image_names, image_id2embed = pickle.load(f)
+        print(image_path)
+        with open(image_path,"rb") as f:
+            image_names, image_id2embed = pickle.load(f)
+#         if os.path.isdir(image_path):
+            
+                            
     
-        else:
-            print("Cannot find image path.")
+#         else:
+#             print("Cannot find image path.")
         self.image_names = image_names
         self.image_id2embed = image_id2embed
     
