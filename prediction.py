@@ -5,8 +5,6 @@ from dataset import ImageDataset
 from model import ClipCaptionModel
 from loguru import logger
 from os.path import join
-
-import clip
 import mindspore
 from mindnlp.transformers import AutoModelForCausalLM,AutoTokenizer
 from mindspore.dataset import GeneratorDataset
@@ -20,8 +18,8 @@ def topk_filtering(logits, topk=10, topp=0, filter_value=-float('Inf')):
     :param filter_value:
     :return:
     """
-    assert logits.dimension() == 2  # batch size 1 for now - could be updated for more but the code would be less clear
-    topk = min(topk, logits.size(-1))  # Safety check
+    # assert logits.dimension() == 2  # batch size 1 for now - could be updated for more but the code would be less clear
+    topk = min(topk, logits.shape[-1])  # Safety check
     if topk > 0:
         # topk()返回最后一维最大的top_k个元素，返回值为二维(values,indices)
         indices_to_remove = logits < mindspore.ops.topk(logits, topk, dim=-1)[0][..., -1, None]

@@ -85,6 +85,9 @@ class ImageDataset:
         print(image_path)
         with open(image_path,"rb") as f:
             image_names, image_id2embed = pickle.load(f)
+        #     data=pickle.load(f)
+        # print(f"data:{data}")
+        # image_names = data[""]
 #         if os.path.isdir(image_path):
             
                             
@@ -99,7 +102,7 @@ class ImageDataset:
     
     def __getitem__(self, index: int) -> Tuple[mindspore.Tensor,...]:
         image_name = self.image_names[index]
-        image_embedding  = self.image_id2embed[index]
+        image_embedding  = self.image_id2embed[index].float()
         return image_name,image_embedding
     
     
