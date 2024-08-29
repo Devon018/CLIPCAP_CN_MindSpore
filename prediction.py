@@ -26,8 +26,8 @@ def topk_filtering(logits, topk=10, topp=0, filter_value=-float('Inf')):
         logits[indices_to_remove] = filter_value
 
     if topp > 0.0:
-        sorted_logits, sorted_indices = mindspore.ops.sort(logits, descending=True, dim=-1)
-        cumulative_probs = mindspore.ops.cumsum(mindspore.ops.softmax(sorted_logits, dim=-1), dim=-1)
+        sorted_logits, sorted_indices = mindspore.ops.sort(logits, descending=True, axis=-1)
+        cumulative_probs = mindspore.ops.cumsum(mindspore.ops.softmax(sorted_logits, axis=-1), axis=-1)
 
         # Remove tokens with cumulative probability above the threshold
         sorted_indices_to_remove = cumulative_probs > topp
@@ -36,7 +36,7 @@ def topk_filtering(logits, topk=10, topp=0, filter_value=-float('Inf')):
         sorted_indices_to_remove[..., 0] = 0
 
         # todo check
-        for i in range(sorted_indices_to_remove.size(0)):
+        for i in range(sorted_indices_to_remove.shape[0]):
             indices_to_remove = sorted_indices[i][sorted_indices_to_remove[i]]
             logits[i][indices_to_remove] = filter_value
 
